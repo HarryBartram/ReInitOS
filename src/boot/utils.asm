@@ -21,5 +21,5 @@ load:
 
 ; Hang, for ending execution
 hang:
-    cli
+    cli         ; Turn off external maskable interrupts
     hlt

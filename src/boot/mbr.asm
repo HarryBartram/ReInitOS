@@ -19,7 +19,7 @@ entry:
     call printStr
 
     ; Infinite loop
-    jmp $
+    jmp hang
 
 ; Including our utility function (print, load, hang, etc)
 %include "boot/utils.asm"
@@ -41,8 +41,8 @@ db_lba:
     dd BOOTLOADER_ADDRESS       ; Source address, in LBA (default is location of stage 2)
     dd 0x00 
 
-times 510-($-$$) db 0x00
-dw 0xAA55
+times 510-($-$$) db 0x00        ; Fill remainder of MBR with zeros
+dw 0xAA55                       ; Magic boot number
 
 stage2LoadedStr:
     db "Bootloader loaded!", 0x0D, 0x0A, 0x00
