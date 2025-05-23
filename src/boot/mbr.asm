@@ -35,7 +35,16 @@ entry:
 
 enterProtectedMode:
     cli
-    call enableA20Line                      ; TODO: Should test if already enabled
+    call enableA20Line
+    ; TODO: ORDER TO TEST A20 (currently just using kbd)
+    ; 1. Test A20 enabled
+    ; 2. BIOS
+    ; 3. Test A20 enabled
+    ; 4. KBD
+    ; 5. Test A20 enabled (wait a bit as it may take a while)
+    ; 6. Fast A20
+    ; 7. Test A20 enabled
+    ; 8. If doesn't work error message and hang
     lgdt [GDTR]
     mov eax, cr0
     or al, 1
