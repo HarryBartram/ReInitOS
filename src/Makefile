@@ -1,10 +1,10 @@
-BOOTSRC = boot/mbr.asm
+BOOTSRC = ${wildcard boot/*.asm}
 BOOTOBJ = img
 
 all: run
 
 ${BOOTOBJ}: ${BOOTSRC}
-	nasm -fbin $^ -o $@
+	nasm -fbin boot/mbr.asm -o $@
 
 run: ${BOOTOBJ}
 	qemu-system-x86_64 -hda $^

@@ -1,8 +1,18 @@
 [BITS 16]
 [ORG 0x7C00]
 
-BOOTLOADER_LOADPOINT    equ 0x7E00
-BOOTLOADER_ADDRESS      equ 0x01
+BOOTLOADER_LOADPOINT            equ 0x7E00
+BOOTLOADER_ADDRESS              equ 0x01
+
+CODESEG                         equ codeDesc-GDT
+DATASEG                         equ dataDesc-GDT
+
+KbdControllerDataPort           equ 0x60
+KbdControllerCommandPort        equ 0x64
+KbdControllerDisableKbd         equ 0xAD
+KbdControllerEnableKbd          equ 0xAE
+KbdControllerReadCtrlOutPort    equ 0xD0
+KbdControllerWriteCtrlOutPort   equ 0xD1
 
 ; Entry point for our bootloader
 entry:
@@ -18,11 +28,62 @@ entry:
     mov si, stage2LoadedStr
     call printStr
 
-    ; Infinite loop
-    jmp hang
+    ; Load our kernel
+
+    ; Enter protected mode
+    jmp enterProtectedMode
+
+enterProtectedMode:
+    cli
+    call enableA20Line                      ; TODO: Should test if already enabled
+    lgdt [GDTR]
+    mov eax, cr0
+    or al, 1
+    mov cr0, eax
+    jmp CODESEG:pmEntry
+
+
+enableA20Line:
+    call .waitInput                         ; Disable the keyboard
+    mov al, KbdControllerDisableKbd
+    out KbdControllerCommandPort, al
+
+    call .waitInput                         ; Read control output port
+    mov al, KbdControllerReadCtrlOutPort
+    out KbdControllerCommandPort, al
+
+    call .waitOutput
+    in al, KbdControllerDataPort
+    push eax
+
+    call .waitInput                         ; Write control output port
+    mov al, KbdControllerWriteCtrlOutPort
+    out KbdControllerCommandPort, al
+
+    call .waitInput
+    pop eax
+    or al, 2
+    out KbdControllerDataPort, al
+
+    call .waitInput                         ; Re-enable the keyboard
+    mov al, KbdControllerEnableKbd
+    out KbdControllerCommandPort, al
+
+    call .waitInput
+    ret
+.waitInput:
+    in al, KbdControllerCommandPort
+    test al, 2
+    jnz .waitInput
+    ret
+.waitOutput:
+    in al, KbdControllerCommandPort
+    test al, 1
+    jz .waitOutput
+    ret
 
 ; Including our utility function (print, load, hang, etc)
-%include "boot/utils.asm"
+%include "boot/mbrUtils.asm"
 
 ; Strings
 loadFailureStr:
@@ -44,5 +105,4 @@ db_lba:
 times 510-($-$$) db 0x00        ; Fill remainder of MBR with zeros
 dw 0xAA55                       ; Magic boot number
 
-stage2LoadedStr:
-    db "Bootloader loaded!", 0x0D, 0x0A, 0x00
+%include "boot/proper.asm"
